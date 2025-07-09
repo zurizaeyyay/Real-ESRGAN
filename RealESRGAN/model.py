@@ -44,20 +44,31 @@ class RealESRGAN:
             cache_dir = os.path.dirname(model_path)
             local_name = os.path.basename(model_path)
             # Downloads cache and weight data to same folder
-            hf_hub_download(repo_id=config['repo_id'],
+            downloaded_path = hf_hub_download(repo_id=config['repo_id'],
                             filename=config['filename'], 
                             cache_dir=cache_dir, 
                             local_dir=cache_dir,
-                            local_dir_use_symlinks=False)
-            print('Weights downloaded to:', os.path.join(cache_dir, local_name))
+                            resume_download=True,  # Resume interrupted downloads
+                            force_download=False   # Use cached if available
+                            )
+            print(f'Weights downloaded to: {downloaded_path}')
         
-        loadnet = torch.load(model_path)
-        if 'params' in loadnet:
-            self.model.load_state_dict(loadnet['params'], strict=True)
-        elif 'params_ema' in loadnet:
-            self.model.load_state_dict(loadnet['params_ema'], strict=True)
-        else:
-            self.model.load_state_dict(loadnet, strict=True)
+        try:
+            if self.device.type == 'cuda':
+                loadnet = torch.load(model_path, map_location=self.device)
+            else:
+                loadnet = torch.load(model_path, map_location='cpu')
+                
+            if 'params' in loadnet:
+                self.model.load_state_dict(loadnet['params'], strict=True)
+            elif 'params_ema' in loadnet:
+                self.model.load_state_dict(loadnet['params_ema'], strict=True)
+            else:
+                self.model.load_state_dict(loadnet, strict=True)
+        except Exception as e:
+            print(f"Failed to load model weights: {e}")
+            raise    
+            
         self.model.eval()
         self.model.to(self.device)
         
