@@ -1,21 +1,15 @@
 import numpy as np
 import torch
 from PIL import Image
-import os
-import io
 
 def pad_reflect(image, pad_size):
-    imsize = image.shape
-    height, width = imsize[:2]
-    new_img = np.zeros([height+pad_size*2, width+pad_size*2, imsize[2]]).astype(np.uint8)
-    new_img[pad_size:-pad_size, pad_size:-pad_size, :] = image
-    
-    new_img[0:pad_size, pad_size:-pad_size, :] = np.flip(image[0:pad_size, :, :], axis=0) #top
-    new_img[-pad_size:, pad_size:-pad_size, :] = np.flip(image[-pad_size:, :, :], axis=0) #bottom
-    new_img[:, 0:pad_size, :] = np.flip(new_img[:, pad_size:pad_size*2, :], axis=1) #left
-    new_img[:, -pad_size:, :] = np.flip(new_img[:, -pad_size*2:-pad_size, :], axis=1) #right
-    
-    return new_img
+    """Optimized reflection padding using numpy"""
+    if pad_size == 0:
+        return image
+        
+    return np.pad(image, 
+                ((pad_size, pad_size), (pad_size, pad_size), (0, 0)), 
+                mode='reflect')
 
 def unpad_image(image, pad_size):
     return image[pad_size:-pad_size, pad_size:-pad_size, :]
@@ -71,7 +65,7 @@ def split_image_into_overlapping_patches(image_array, patch_size, padding_size=2
         padding_size: size of the overlapping area.
     """
     
-    xmax, ymax, _ = image_array.shape
+    xmax, ymax, channels = image_array.shape
     x_remainder = xmax % patch_size
     y_remainder = ymax % patch_size
     
@@ -86,21 +80,29 @@ def split_image_into_overlapping_patches(image_array, patch_size, padding_size=2
     padded_image = pad_patch(extended_image, padding_size, channel_last=True)
     
     xmax, ymax, _ = padded_image.shape
-    patches = []
+    
+    # Pre-allocate patches array for better memory efficiency
+    x_patches = (xmax - 2 * padding_size) // patch_size
+    y_patches = (ymax - 2 * padding_size) // patch_size
+    total_patches = x_patches * y_patches
+    patch_shape = (patch_size + 2 * padding_size, patch_size + 2 * padding_size, channels)
+    
+    patches = np.empty((total_patches,) + patch_shape, dtype=image_array.dtype)
+    
     
     x_lefts = range(padding_size, xmax - padding_size, patch_size)
     y_tops = range(padding_size, ymax - padding_size, patch_size)
-    
+    patch_idx = 0
     for x in x_lefts:
         for y in y_tops:
             x_left = x - padding_size
             y_top = y - padding_size
             x_right = x + patch_size + padding_size
             y_bottom = y + patch_size + padding_size
-            patch = padded_image[x_left:x_right, y_top:y_bottom, :]
-            patches.append(patch)
+            patches[patch_idx] = padded_image[x_left:x_right, y_top:y_bottom, :]
+            patch_idx += 1
     
-    return np.array(patches), padded_image.shape
+    return patches, padded_image.shape
 
 
 def stich_together(patches, padded_image_shape, target_shape, padding_size=4):

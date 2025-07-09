@@ -39,6 +39,44 @@ sr_image = model.predict(image)
 sr_image.save('results/sr_image.png')
 ```
 
+Training usage:
+
+Step 1: Put your training images in the directories
+# Add high-resolution images (at least 1024x1024) to:
+training_data/high_res/
+training_data/validation/high_res/
+
+Step 2: Run the training script
+# Activate your conda environment
+# Navigate to the Real-ESRGAN directory
+
+# Start training
+```
+python train_realesrgan.py
+```
+
+Step 3: Resume training if error occurs
+# In main() function of train_realesrgan.py, change this line to desired checkpoint:
+checkpoint_path = 'checkpoints/checkpoint_epoch_.pth'
+
+Training Recommendations
+- GPU: At least 8GB VRAM (RTX 3070 or better)
+- RAM: 32GB+ recommended
+- Storage: Fast SSD for dataset
+
+Dataset Recommendations
+- Size: 10,000+ high-quality images minimum
+- Resolution: At least 1024x1024 for HR images
+- Variety: Diverse content (photos, art, different scenes)
+- Quality: Clean, sharp images without artifacts
+
+Training Parameters
+- Batch Size: Start with 8-16, adjust based on GPU memory
+- Learning Rate: 2e-4 to 1e-4
+- Epochs: 300-500 epochs typically needed
+- Patience: Training takes 1-7 days depending on hardware
+
+
 ### Examples
 
 ---

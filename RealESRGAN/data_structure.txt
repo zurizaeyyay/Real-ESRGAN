@@ -1,0 +1,15 @@
+training_data/
+├── high_res/          # Ground truth high-resolution images
+│   ├── img001.png
+│   ├── img002.png
+│   └── ...
+├── low_res/           # Low-resolution inputs (optional - can be generated)
+│   ├── img001.png
+│   ├── img002.png
+│   └── ...
+|── validation/        # Validation set
+|   ├── high_res/
+|   └── low_res/        # optional 
+checkpoints\           # Will be created automatically
+weights\               # Will be created automatically
+samples\               # Will be created automatically
