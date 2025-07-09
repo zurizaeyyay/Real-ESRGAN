@@ -1,14 +1,14 @@
 HF_MODELS = {
     2: dict(
-        repo_id='ai-forever/Real-ESRGAN',
+        repo_id='zurizaeyyay/Real-ESRGAN',
         filename='RealESRGAN_x2.pth',
     ),
     4: dict(
-        repo_id='ai-forever/Real-ESRGAN',
+        repo_id='zurizaeyyay/Real-ESRGAN',
         filename='RealESRGAN_x4.pth',
     ),
     8: dict(
-        repo_id='ai-forever/Real-ESRGAN',
+        repo_id='zurizaeyyay/Real-ESRGAN',
         filename='RealESRGAN_x8.pth',
     ),
 }
