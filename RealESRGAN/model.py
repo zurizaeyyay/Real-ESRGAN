@@ -15,12 +15,17 @@ from .config import HF_MODELS
 
 
 class RealESRGAN:
-    def __init__(self, device, scale=4):
+    def __init__(self, device, scale=4, use_attention=False, resample_mode='bicubic'):
         self.device = device
         self.scale = scale
+        self.use_attention = use_attention
+        self.resample_mode=resample_mode
+        
         self.model = RRDBNet(
             num_in_ch=3, num_out_ch=3, num_feat=64, 
-            num_block=23, num_grow_ch=32, scale=scale
+            num_block=23, num_grow_ch=32, scale=scale,
+            use_attention=use_attention,
+            resample_mode=resample_mode
         )
         
     def load_weights(self, model_path, download=True):
@@ -44,13 +49,39 @@ class RealESRGAN:
                 loadnet = torch.load(model_path, map_location=self.device)
             else:
                 loadnet = torch.load(model_path, map_location='cpu')
-                
+            
             if 'params' in loadnet:
-                self.model.load_state_dict(loadnet['params'], strict=True)
+                pretrained_dict = loadnet['params']
             elif 'params_ema' in loadnet:
-                self.model.load_state_dict(loadnet['params_ema'], strict=True)
+                pretrained_dict = loadnet['params_ema']
             else:
-                self.model.load_state_dict(loadnet, strict=True)
+                pretrained_dict = loadnet
+            
+            # Check if pretrained model has attention layers
+            has_attention = any('attention' in k for k in pretrained_dict.keys())
+            
+            
+            # fall back code for old weights and model incompatibility
+            if has_attention and not self.use_attention:
+                print("Warning: Pretrained weights has no attention layers but current model does")
+            elif not has_attention and self.use_attention:
+                print("Warning: Current model has attention but pretrained weights doesn't. Attention layers will be randomly initialized.")
+            
+            # Smart loading based on architecture compatibility
+            if has_attention == self.use_attention:
+                # Perfect match - load normally
+                self.model.load_state_dict(pretrained_dict, strict=True)
+                print("Loaded weights with perfect architecture match")
+            else:
+                # Partial match - load compatible layers only
+                model_dict = self.model.state_dict()
+                compatible_dict = {k: v for k, v in pretrained_dict.items() 
+                                 if k in model_dict and v.size() == model_dict[k].size()}
+                
+                model_dict.update(compatible_dict)
+                self.model.load_state_dict(model_dict, strict=False)
+                print(f"Loaded {len(compatible_dict)}/{len(pretrained_dict)} compatible weights")
+                
         except Exception as e:
             print(f"Failed to load model weights: {e}")
             raise    
@@ -66,7 +97,16 @@ class RealESRGAN:
             return {'device_type': 'cpu', 'dtype': torch.float16, 'enabled': False}
         else:  # CPU
             return {'device_type': 'cpu', 'dtype': torch.float32, 'enabled': False}
+    
+    def set_resample_mode(self, resample_mode):
+        """Update the resampling mode"""
+        valid_modes = ['nearest', 'linear', 'bilinear', 'bicubic', 'trilinear', 'area']
+        if resample_mode not in valid_modes:
+            raise ValueError(f"Invalid resample mode: {resample_mode}. Valid modes: {valid_modes}")
         
+        self.resample_mode = resample_mode
+        print(f"Resample mode updated to: {resample_mode}")
+    
     def predict(self, lr_image, batch_size=4, patches_size=192,
                 padding=24, pad_size=15):
         with torch.amp.autocast(**self._get_autocast_kwargs()):
