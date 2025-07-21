@@ -8,7 +8,7 @@ class ProgressTracker:
         self.start_time = time.time()
         self.last_progress_percent = 0
     
-    def update(self, progress, processed, total, stage, remaining=None, elapsed=None):
+    async def update(self, progress, processed, total, stage, remaining=None, elapsed=None):
         """Update progress with smart formatting"""
         if self.callback is None:
             return
@@ -22,7 +22,7 @@ class ProgressTracker:
         
         # Format message based on stage
         message = self._format_message(stage, processed, total, remaining, elapsed)
-        self.callback(progress, message)
+        await self.callback(progress, message)
     
     def _format_message(self, stage, processed, total, remaining=None, elapsed=None):
         """Lazy string formatting"""

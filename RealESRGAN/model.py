@@ -140,7 +140,7 @@ class RealESRGAN:
 
             return sr_img
         
-    def predict_with_progress(self, lr_image, batch_size=4, patches_size=192,
+    async def predict_with_progress(self, lr_image, batch_size=4, patches_size=192,
                             padding=24, pad_size=15, progress_callback=None):
         """
         Predict with progress tracking
@@ -160,7 +160,7 @@ class RealESRGAN:
             lr_image = np.array(lr_image)
             
             # Stage 1: Preparation
-            tracker.update(0.0, 0, 0, "preparing")
+            await tracker.update(0.0, 0, 0, "preparing")
             
             lr_image = pad_reflect(lr_image, pad_size)
             patches, p_shape = split_image_into_overlapping_patches(
@@ -171,7 +171,7 @@ class RealESRGAN:
             img = torch.FloatTensor(patches/255).permute((0,3,1,2)).to(device).detach()
             
             # Stage 2: Processing patches
-            tracker.update(0.1, 0, total_patches, "processing")
+            await tracker.update(0.1, 0, total_patches, "processing")
             
             processed_patches = 0
             
@@ -181,7 +181,7 @@ class RealESRGAN:
                 processed_patches = min(batch_size, total_patches)
                 
                 progress = 0.1 + (processed_patches / total_patches) * 0.7
-                tracker.update(progress, processed_patches, total_patches, "processing")
+                await tracker.update(progress, processed_patches, total_patches, "processing")
                 
                 # Process remaining batches
                 for i in range(batch_size, img.shape[0], batch_size):
@@ -190,10 +190,10 @@ class RealESRGAN:
                     
                     progress = 0.1 + (processed_patches / total_patches) * 0.7
                     remaining = tracker.calculate_remaining_time(processed_patches, total_patches)
-                    tracker.update(progress, processed_patches, total_patches, "processing", remaining)
+                    await tracker.update(progress, processed_patches, total_patches, "processing", remaining)
 
             # Stage 3: Reconstruction
-            tracker.update(0.85, total_patches, total_patches, "reconstructing")
+            await tracker.update(0.85, total_patches, total_patches, "reconstructing")
             
             sr_image = res.permute((0,2,3,1)).clamp_(0, 1).cpu()
             np_sr_image = sr_image.numpy()
@@ -206,7 +206,7 @@ class RealESRGAN:
             )
             
             # Stage 4: Finalizing
-            tracker.update(0.95, total_patches, total_patches, "finalizing")
+            await tracker.update(0.95, total_patches, total_patches, "finalizing")
             
             sr_img = (np_sr_image*255).astype(np.uint8)
             sr_img = unpad_image(sr_img, pad_size*scale)
@@ -214,7 +214,7 @@ class RealESRGAN:
             
             # Complete
             total_time = time.time() - tracker.start_time
-            tracker.update(1.0, total_patches, total_patches, "complete", elapsed=total_time)
+            await tracker.update(1.0, total_patches, total_patches, "complete", elapsed=total_time)
             
             return sr_img
         
