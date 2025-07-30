@@ -45,7 +45,7 @@ class RealESRGAN:
             print(f'Weights downloaded to: {downloaded_path}')
         
         try:
-            if self.device.type == 'cuda':
+            if self.device.type == 'cuda' or self.device.type == 'mps':
                 loadnet = torch.load(model_path, map_location=self.device)
             else:
                 loadnet = torch.load(model_path, map_location='cpu')
@@ -94,7 +94,7 @@ class RealESRGAN:
         if self.device.type == 'cuda':
             return {'device_type': 'cuda', 'dtype': torch.float16, 'enabled': True}
         elif self.device.type == 'mps':  # Apple Silicon
-            return {'device_type': 'cpu', 'dtype': torch.float16, 'enabled': False}
+            return {'device_type': 'mps', 'dtype': torch.float16, 'enabled': False}
         else:  # CPU
             return {'device_type': 'cpu', 'dtype': torch.float32, 'enabled': False}
     
