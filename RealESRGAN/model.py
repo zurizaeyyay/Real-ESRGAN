@@ -39,7 +39,6 @@ class RealESRGAN:
                             filename=config['filename'], 
                             cache_dir=cache_dir, 
                             local_dir=cache_dir,
-                            resume_download=True,  # Resume interrupted downloads
                             force_download=False   # Use cached if available
                             )
             print(f'Weights downloaded to: {downloaded_path}')
